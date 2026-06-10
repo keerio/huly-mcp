@@ -166,7 +166,16 @@ export const deleteDocument = wrapToolHandler<z.infer<typeof DeleteDocumentSchem
   return `✅ Document **"${doc.title}"** (\`${doc._id}\`) deleted.`
 })
 
-const DATALAKE_URL = 'https://dl-eu.huly.app'
+// Cloud Huly uses a datalake service; self-host (huly-selfhost) has none and
+// uploads blobs through the front service `/files` endpoint instead.
+// - HULY_DATALAKE_URL set        → datalake mode: `${url}/upload/form-data/${ws}`
+// - else HULY_FRONT_URL set       → front mode:    `${frontUrl}/files`
+// - else                          → cloud default
+const DATALAKE_URL = process.env.HULY_DATALAKE_URL ?? 'https://dl-eu.huly.app'
+const FRONT_UPLOAD_URL =
+  process.env.HULY_DATALAKE_URL == null && process.env.HULY_FRONT_URL != null
+    ? `${process.env.HULY_FRONT_URL.replace(/\/+$/, '')}/files`
+    : null
 
 export const updateDocument = wrapToolHandler<z.infer<typeof UpdateDocumentSchema>>(async (args) => {
   const client = await getConnection()
@@ -184,7 +193,9 @@ export const updateDocument = wrapToolHandler<z.infer<typeof UpdateDocumentSchem
   const form = new FormData()
   form.append('file', new Blob([content], { type: 'application/json' }), blobId)
 
-  const uploadUrl = `${DATALAKE_URL}/upload/form-data/${workspaceUuid}`
+  // Self-host front `/files` expects multipart and returns [{key,id,metadata}]
+  // where id == the uploaded filename. Cloud datalake uses /upload/form-data/<ws>.
+  const uploadUrl = FRONT_UPLOAD_URL ?? `${DATALAKE_URL}/upload/form-data/${workspaceUuid}`
   const uploadRes = await fetch(uploadUrl, {
     method: 'POST',
     headers: { Authorization: `Bearer ${wsToken}` },
@@ -193,7 +204,7 @@ export const updateDocument = wrapToolHandler<z.infer<typeof UpdateDocumentSchem
 
   if (!uploadRes.ok) {
     const body = await uploadRes.text().catch(() => '')
-    throw new Error(`Datalake upload failed (${uploadRes.status}): ${body}`)
+    throw new Error(`Blob upload failed (${uploadRes.status}) at ${uploadUrl}: ${body}`)
   }
 
   const uploadJson: Array<{ key: string, id: string }> = await uploadRes.json()
