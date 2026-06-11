@@ -17,8 +17,14 @@ export async function getConnection (): Promise<TxOperations> {
   if (state !== null) return state.txClient
   if (connectPromise !== null) return (await connectPromise).txClient
   connectPromise = connect()
-  state = await connectPromise
-  connectPromise = null
+  try {
+    state = await connectPromise
+  } finally {
+    // Always clear the cached promise: a rejected connect() must not be
+    // cached forever, otherwise every subsequent call replays the same error
+    // until the process is restarted.
+    connectPromise = null
+  }
   return state.txClient
 }
 

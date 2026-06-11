@@ -5,6 +5,7 @@ import { SortingOrder, generateId, type Ref, type DocumentUpdate } from '@hcengi
 import type { Person } from '@hcengineering/contact'
 import { makeRank } from '@hcengineering/rank'
 import { getConnection } from '../connection'
+import { uploadMarkdownBlob, fetchMarkupText } from './documents'
 import { wrapToolHandler } from '../utils/errors'
 import { priorityLabel, formatDate } from '../utils/format'
 import type { z } from 'zod'
@@ -61,7 +62,7 @@ export const getIssue = wrapToolHandler<z.infer<typeof GetIssueSchema>>(async (a
 
   const status = await client.findOne(tracker.class.IssueStatus, { _id: issue.status })
 
-  return [
+  const lines = [
     `## ${issue.identifier}: ${issue.title}`,
     `**Status:** ${status?.name ?? 'Unknown'}`,
     `**Priority:** ${priorityLabel(issue.priority)}`,
@@ -70,7 +71,14 @@ export const getIssue = wrapToolHandler<z.infer<typeof GetIssueSchema>>(async (a
     `**Sub-issues:** ${issue.subIssues ?? 0}`,
     `**Estimation:** ${issue.estimation > 0 ? `${issue.estimation}h` : 'None'}`,
     `**Reported time:** ${issue.reportedTime > 0 ? `${issue.reportedTime}h` : 'None'}`
-  ].join('\n')
+  ]
+
+  if (issue.description != null) {
+    const text = await fetchMarkupText(issue.description as unknown as string)
+    if (text != null) lines.push(`\n**Description:**\n${text}`)
+  }
+
+  return lines.join('\n')
 })
 
 export const createIssue = wrapToolHandler<z.infer<typeof CreateIssueSchema>>(async (args) => {
@@ -112,7 +120,12 @@ export const createIssue = wrapToolHandler<z.infer<typeof CreateIssueSchema>>(as
   )
   const rank = makeRank(lastIssue?.rank, undefined)
 
-  // 6. Create via addCollection (issues are AttachedDoc)
+  // 6. Upload markdown description as markup blob (if provided)
+  const descriptionRef = args.description != null && args.description !== ''
+    ? await uploadMarkdownBlob(identifier, args.description)
+    : null
+
+  // 7. Create via addCollection (issues are AttachedDoc)
   const issueId = generateId<Issue>()
   await client.addCollection(
     tracker.class.Issue,
@@ -122,7 +135,7 @@ export const createIssue = wrapToolHandler<z.infer<typeof CreateIssueSchema>>(as
     'subIssues',
     {
       title: args.title,
-      description: null,
+      description: descriptionRef as any,
       status: status._id,
       priority: IssuePriority[args.priority as keyof typeof IssuePriority],
       number: issueNumber,
@@ -221,6 +234,12 @@ export const updateIssue = wrapToolHandler<z.infer<typeof UpdateIssueSchema>>(as
       if (milestone == null) throw new Error(`Milestone '${args.milestoneLabel}' not found in this project.`)
       updates.milestone = milestone._id
     }
+  }
+
+  if (args.description !== undefined) {
+    updates.description = (args.description === null || args.description === ''
+      ? null
+      : await uploadMarkdownBlob(args.identifier, args.description)) as any
   }
 
   if (Object.keys(updates).length === 0) return `No changes made to ${args.identifier}.`

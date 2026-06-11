@@ -22,7 +22,8 @@ export const CreateIssueSchema = z.object({
   title: z.string().min(1).describe('Issue title'),
   priority: PriorityEnum.default('NoPriority').describe('Issue priority'),
   statusName: z.string().optional().describe('Status name (defaults to project default)'),
-  dueDate: z.string().optional().describe('Due date as ISO 8601 string, e.g. "2026-04-01"')
+  dueDate: z.string().optional().describe('Due date as ISO 8601 string, e.g. "2026-04-01"'),
+  description: z.string().optional().describe('Issue description as markdown')
 })
 
 export const DeleteIssueSchema = z.object({
@@ -37,7 +38,8 @@ export const UpdateIssueSchema = z.object({
   dueDate: z.string().nullable().optional().describe('New due date (ISO 8601) or null to clear'),
   assignee: z.string().nullable().optional().describe('Assignee name (first/last/full) or null to unassign'),
   componentLabel: z.string().optional().describe('Component name to assign, or null to unassign'),
-  milestoneLabel: z.string().nullable().optional().describe('Milestone name to assign, or null to clear')
+  milestoneLabel: z.string().nullable().optional().describe('Milestone name to assign, or null to clear'),
+  description: z.string().nullable().optional().describe('New description as markdown, or null to clear')
 })
 
 export const AddCommentSchema = z.object({

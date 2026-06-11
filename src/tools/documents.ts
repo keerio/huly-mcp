@@ -177,19 +177,17 @@ const FRONT_UPLOAD_URL =
     ? `${process.env.HULY_FRONT_URL.replace(/\/+$/, '')}/files`
     : null
 
-export const updateDocument = wrapToolHandler<z.infer<typeof UpdateDocumentSchema>>(async (args) => {
-  const client = await getConnection()
+// Convert markdown to Huly markup JSON, upload it as a blob and return the
+// blob ref. Shared by document content and issue descriptions.
+export async function uploadMarkdownBlob (idPrefix: string, markdown: string): Promise<string> {
   const { wsToken, workspaceUuid } = await getWorkspaceInfo()
 
-  const doc = await client.findOne(document.class.Document, { _id: args.documentId as Ref<Document> })
-  if (doc == null) throw new Error(`Document '${args.documentId}' not found.`)
-
   // Convert markdown to ProseMirror JSON
-  const prosemirror = markdownToProseMirror(args.markdown)
+  const prosemirror = markdownToProseMirror(markdown)
   const content = JSON.stringify(prosemirror)
 
   // Upload to datalake
-  const blobId = `${args.documentId}-content-${Date.now()}`
+  const blobId = `${idPrefix}-content-${Date.now()}`
   const form = new FormData()
   form.append('file', new Blob([content], { type: 'application/json' }), blobId)
 
@@ -208,7 +206,38 @@ export const updateDocument = wrapToolHandler<z.infer<typeof UpdateDocumentSchem
   }
 
   const uploadJson: Array<{ key: string, id: string }> = await uploadRes.json()
-  const uploadedId = uploadJson[0]?.id ?? blobId
+  return uploadJson[0]?.id ?? blobId
+}
+
+// Fetch a markup blob and return its plain-text rendering (null when the
+// front URL is not configured or the blob cannot be fetched).
+export async function fetchMarkupText (blobRef: string): Promise<string | null> {
+  const frontUrl = process.env.HULY_FRONT_URL
+  if (frontUrl == null || frontUrl === '') return null
+  try {
+    const { wsToken, workspaceUuid } = await getWorkspaceInfo()
+    const blobUrl = `${frontUrl}/files?file=${encodeURIComponent(blobRef)}&workspace=${workspaceUuid}&token=${wsToken}`
+    const res = await fetch(blobUrl)
+    if (!res.ok) return null
+    const text = await res.text()
+    try {
+      const extracted = extractText(JSON.parse(text))
+      return extracted.length > 0 ? extracted : null
+    } catch {
+      return text.substring(0, 2000)
+    }
+  } catch {
+    return null
+  }
+}
+
+export const updateDocument = wrapToolHandler<z.infer<typeof UpdateDocumentSchema>>(async (args) => {
+  const client = await getConnection()
+
+  const doc = await client.findOne(document.class.Document, { _id: args.documentId as Ref<Document> })
+  if (doc == null) throw new Error(`Document '${args.documentId}' not found.`)
+
+  const uploadedId = await uploadMarkdownBlob(args.documentId, args.markdown)
 
   // Update document content ref
   await client.updateDoc(document.class.Document, doc.space, doc._id, { content: uploadedId } as any)
