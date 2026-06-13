@@ -1,5 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { listProjects, getProject, createProject } from './tools/projects'
+import { listProjects, getProject, createProject, archiveProject, unarchiveProject } from './tools/projects'
 import { listIssues, getIssue, createIssue, updateIssue, deleteIssue } from './tools/issues'
 import { addComment, listComments, deleteComment } from './tools/comments'
 import { logTime } from './tools/log-time'
@@ -40,7 +40,8 @@ import {
   ListComponentsSchema,
   CreateComponentSchema,
   CreateTeamspaceSchema,
-  DeleteDocumentSchema
+  DeleteDocumentSchema,
+  ArchiveProjectSchema
 } from './schemas'
 
 export function createServer (): McpServer {
@@ -50,6 +51,8 @@ export function createServer (): McpServer {
   server.tool('list_projects', 'List all projects in the Huly workspace', {}, listProjects)
   server.tool('get_project', 'Get a project by its identifier (e.g. "PROJ")', GetProjectSchema.shape, getProject)
   server.tool('create_project', 'Create a new tracker project with a unique ALL-CAPS identifier', CreateProjectSchema.shape, createProject)
+  server.tool('archive_project', 'Archive a project by identifier — hides it from the sidebar and listings but preserves it (reversible)', ArchiveProjectSchema.shape, archiveProject)
+  server.tool('unarchive_project', 'Restore an archived project by identifier (requires a MAINTAINER+/OWNER account to see archived projects)', ArchiveProjectSchema.shape, unarchiveProject)
 
   // Issues
   server.tool('list_issues', 'List issues in a project with optional filters', ListIssuesSchema.shape, listIssues)

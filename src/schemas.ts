@@ -6,6 +6,10 @@ export const GetProjectSchema = z.object({
   identifier: z.string().describe('Project identifier, e.g. "PROJ"')
 })
 
+export const ArchiveProjectSchema = z.object({
+  identifier: z.string().describe('Project identifier, e.g. "PROJ"')
+})
+
 export const ListIssuesSchema = z.object({
   projectIdentifier: z.string().describe('Project identifier, e.g. "PROJ"'),
   status: z.string().optional().describe('Filter by status name, e.g. "In Progress"'),
