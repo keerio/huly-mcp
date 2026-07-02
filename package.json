@@ -47,11 +47,12 @@
     "@hcengineering/document": "^0.7.0",
     "@hcengineering/platform": "^0.7.0",
     "@hcengineering/rank": "^0.7.0",
-    "@hcengineering/tags": "^0.7.0",
     "@hcengineering/server-client": "^0.7.0",
+    "@hcengineering/tags": "^0.7.0",
     "@hcengineering/task": "^0.7.0",
     "@hcengineering/tracker": "^0.7.0",
     "@modelcontextprotocol/sdk": "^1.10.0",
+    "fake-indexeddb": "^6.2.5",
     "ws": "^8.18.0",
     "zod": "^3.23.0"
   },
