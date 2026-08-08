@@ -33,14 +33,17 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "node --max-old-space-size=4096 node_modules/typescript/bin/tsc",
+    "build": "node scripts/restore-hcengineering-types.js && node --max-old-space-size=4096 node_modules/typescript/bin/tsc",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "setup": "node scripts/setup.js",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "restore-types": "node scripts/restore-hcengineering-types.js",
+    "postinstall": "node scripts/restore-hcengineering-types.js"
   },
   "dependencies": {
     "@hcengineering/account-client": "^0.7.0",
+    "@hcengineering/api-client": "^0.7.423",
     "@hcengineering/chunter": "^0.7.0",
     "@hcengineering/contact": "^0.7.0",
     "@hcengineering/core": "^0.7.0",

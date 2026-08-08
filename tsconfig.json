@@ -10,7 +10,10 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "declaration": true,
-    "sourceMap": true
+    "sourceMap": true,
+    // Without this tsc emitted dist/ even with ~60 errors on the board, so a real type error
+    // was indistinguishable from the @hcengineering missing-declarations noise and shipped anyway.
+    "noEmitOnError": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
