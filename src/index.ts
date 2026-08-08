@@ -1,5 +1,9 @@
 #!/usr/bin/env node
-// MUST be first: installs window/indexedDB/WebSocket shims before any @hcengineering
+// MUST be first: moves console.log/info/debug off stdout, which the stdio transport owns
+// for JSON-RPC. The @hcengineering libs log there and corrupt the stream otherwise
+// («Unexpected token 'C', "Connected "... is not valid JSON»).
+import './stdout-guard'
+// Then: installs window/indexedDB/WebSocket shims before any @hcengineering
 // module loads, otherwise every tool call throws «window is not defined» (LAB-120).
 import './polyfills'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
